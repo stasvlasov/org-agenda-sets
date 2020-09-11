@@ -141,7 +141,7 @@
     (with-temp-file agenda-sets-file
       (insert "(setq agenda-sets")
       (newline)
-      (insert (pp agenda-sets) ")")))
+      (insert "'" (pp agenda-sets) ")")))
   ;; return
   agenda-sets)
 
