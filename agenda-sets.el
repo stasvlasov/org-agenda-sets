@@ -1,3 +1,5 @@
+(defvar agenda-sets-file (concat org-directory "/agenda-sets.el")
+  "Where to store agenda sets (lists of agenda files).")
 (defvar agenda-sets nil "List of (SET-NAME SET-FILES).")
 (defvar agenda-sets-definitions nil "List of (SET-NAME SET-RECIPE).")
 
