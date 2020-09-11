@@ -132,16 +132,17 @@
 (defun agenda-sets (&optional reload rescan sets)
   "Returns `agenda-sets' list if it is not nil. If it is nil or RELOAD is set then attempt to load `agenda-sets-file'. If load fails or RESCAN is set then attempt to rescan files with `agenda-sets-scan' (optional SETS is passed there) and rewrite `agenda-sets-file' with new value of `agenda-sets'."
   (interactive)
-  (unless (and (or reload (not agenda-sets))
-               (load agenda-sets-file 'no-error 'no-message)
-               (not rescan))
-      (when (y-or-n-p "Rebuild agenda-sets-file?")
-        (agenda-sets-scan sets)
-        (with-temp-file agenda-sets-file
-          (insert "(setq agenda-sets")
-          (newline)
-          (insert (pp agenda-sets) ")"))))
-  ;; return list of files
+  (when (or rescan
+            (and (or reload (not agenda-sets))
+                 (not (load agenda-sets-file 'no-error 'no-message))
+                 (y-or-n-p "Build agenda-sets-file?")))
+    (agenda-sets-scan sets)
+    ;; write results to file
+    (with-temp-file agenda-sets-file
+      (insert "(setq agenda-sets")
+      (newline)
+      (insert (pp agenda-sets) ")")))
+  ;; return
   agenda-sets)
 
 (defun agenda-sets-eq (symb name)
