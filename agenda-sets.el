@@ -135,7 +135,7 @@
   (unless (and (or reload (not agenda-sets))
                (load agenda-sets-file 'no-error 'no-message)
                (not rescan))
-      (when (y-or-n-p "Rebuild agenda-sets-file: %s?" agenda-sets-file)
+      (when (y-or-n-p "Rebuild agenda-sets-file?")
         (agenda-sets-scan sets)
         (with-temp-file agenda-sets-file
           (insert "(setq agenda-sets")
