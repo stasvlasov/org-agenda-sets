@@ -136,6 +136,9 @@
             (and (or reload (not agenda-sets))
                  (not (load agenda-sets-file 'no-error 'no-message))
                  (y-or-n-p "Build agenda-sets-file?")))
+    ;; reset
+    (setq agenda-sets nil)
+    ;; scan and fill agenda-sets
     (agenda-sets-scan sets)
     ;; write results to file
     (with-temp-file agenda-sets-file
