@@ -1,6 +1,6 @@
 (defvar org-agenda-sets-file (concat user-emacs-directory "org-agenda-sets.el")
   "Where to store agenda sets (lists of agenda files).")
-(defvar org-agenda-sets nil "List of (SET-NAME SET-FILES).")
+(defvar org-agenda-sets nil "List of (SET-NAME AGENDA-FILES).")
 (defvar org-agenda-sets-definitions nil "List of (SET-NAME SET-RECIPE).")
 
 (require 'dash)
@@ -56,8 +56,7 @@
 
 (defun org-agenda-sets-get (names)
   "Return set of agenda-files by name from `org-agenda-sets'. List of files is expected to be third element in each named (first element is a name) list in `org-agenda-sets'."
-  (interactive)
-    (-flatten (--map (alist-get it org-agenda-sets) (-flatten names))))
+  (-flatten (--map (alist-get it org-agenda-sets) (-flatten names))))
 
 ;; (org-agenda-sets-get '(name2 name3))
 ;; (org-agenda-sets-get '(name2 name1))
@@ -118,6 +117,8 @@
                 ;; reverse because set definition adds set in front
                 (seq-reverse org-agenda-sets-definitions))))
     (dolist (s sets)
+      (message "Scanning set: %s" (car s))
+      ;; modifies org-agenda-sets
       (setf (alist-get (car s) org-agenda-sets nil 'remove)
             (org-agenda-sets-make (cadr s))))))
 
