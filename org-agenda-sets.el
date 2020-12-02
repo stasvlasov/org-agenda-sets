@@ -157,7 +157,7 @@
   "Select agenda set from `org-agenda-sets' (rebuild if needed) and assign it to `org-agenda-files'."
   (interactive
    (list (completing-read
-          "Chose agenda files set"
+          "Chose agenda files set to use"
           (mapcar 'car (org-agenda-sets)))))
   (setq org-agenda-files
         (alist-get s org-agenda-sets nil nil 'org-agenda-sets-eq))
@@ -168,7 +168,7 @@
   "Select agenda set from `org-agenda-sets' (rebuild if needed) and add it to `org-agenda-files'."
   (interactive
    (list (completing-read
-          "Chose agenda files set"
+          "Chose agenda files set to add"
           (mapcar 'car (org-agenda-sets)))))
   (setq org-agenda-files
         (append org-agenda-files
@@ -180,7 +180,7 @@
   "Select agenda set from `org-agenda-sets' (rebuild if needed) and subtract it from `org-agenda-files'."
   (interactive
    (list (completing-read
-          "Chose agenda files set"
+          "Chose agenda files set to remove"
           (mapcar 'car (org-agenda-sets)))))
   (setq org-agenda-files
         (-difference org-agenda-files
