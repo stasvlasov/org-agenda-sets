@@ -181,7 +181,7 @@
   "Rebuilds `org-agenda-sets' and saves it to `org-agenda-sets-file'."
   (interactive)
   (org-agenda-sets nil 'rescan)
-  (message "Agenda sets reloaded from disk."))
+  (message "Agenda sets rebuild."))
 
 (defun org-agenda-sets-eq (symb name)
   (string= (symbol-name symb) name))
