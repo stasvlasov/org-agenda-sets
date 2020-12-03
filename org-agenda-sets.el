@@ -2,9 +2,11 @@
   "Where to store agenda sets (lists of agenda files).")
 (defvar org-agenda-sets nil "List of (SET-NAME AGENDA-FILES).")
 (defvar org-agenda-sets-definitions nil "List of (SET-NAME SET-RECIPE).")
+(defvar org-agenda-sets-default-set nil "Default set in `org-agenda-sets-use' prompt.")
 
-(require 'dash)
 (require 'f)
+(require 'dash)
+(require 'org-agenda)
 
 (defmacro org-agenda-sets-define (name &rest recipe)
   "Adds or updates agenda set's definition (NAME (RECIPE)) to `org-agenda-sets-definitions'"
@@ -191,7 +193,7 @@
   (interactive
    (list (completing-read
           "Chose agenda files set to use"
-          (mapcar 'car (org-agenda-sets)))))
+          (mapcar 'car (org-agenda-sets)) nil nil nil nil org-agenda-sets-default-set)))
   (setq org-agenda-files
         (alist-get s org-agenda-sets nil nil 'org-agenda-sets-eq))
   (message "%s files are used for Org Agenda" (length org-agenda-files)))
@@ -203,7 +205,7 @@
           "Chose agenda files set to add"
           (mapcar 'car (org-agenda-sets)))))
   (setq org-agenda-files
-        (append org-agenda-files
+        (-union org-agenda-files
                 (alist-get s org-agenda-sets nil nil 'org-agenda-sets-eq)))
   (message "%s files are used for Org Agenda" (length org-agenda-files)))
 
