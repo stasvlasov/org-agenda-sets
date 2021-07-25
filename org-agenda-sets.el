@@ -1,3 +1,5 @@
+;; Reference from [[associate-id:org:7b6j9y20p5j0][Agenda files sets management (AFSM)]] on [2021-07-25 Sun 09:13]
+
 (defvar org-agenda-sets-file (concat user-emacs-directory "org-agenda-sets.el")
   "Where to store agenda sets (lists of agenda files).")
 (defvar org-agenda-sets nil "List of (SET-NAME AGENDA-FILES).")
@@ -187,6 +189,37 @@
 
 (defun org-agenda-sets-eq (symb name)
   (string= (symbol-name symb) name))
+
+
+(defun org-agenda-sets-open-set-file (s)
+  "Chose agenda set from `org-agenda-sets' and find-file in it."
+  (interactive
+   (list (completing-read
+          "Chose agenda files set to open file from"
+          (mapcar 'car (org-agenda-sets)) nil nil nil nil org-agenda-sets-default-set)))
+  (find-file (completing-read
+              (concat "Open a file from '" s "' set")
+              (alist-get s org-agenda-sets nil nil 'org-agenda-sets-eq))))
+
+(defun org-agenda-sets-open-agenda-file ()
+  "Opens file from current set (i.e., `org-agenda-files')"
+  (interactive)
+  (find-file (completing-read "Open file from current set" org-agenda-files)))
+
+(defun org-agenda-sets-open (&optional arg)
+  "Opens file from current set (i.e., `org-agenda-files') or ask for a set to chose if called with prefix."
+  (interactive "P")
+  (if arg (call-interactively 'org-agenda-sets-open-set-file)
+    org-agenda-sets-open-agenda-file))
+
+(defun org-agenda-sets-find-file (&optional arg)
+  "Opens file from current set (i.e., `org-agenda-files') or ask for a set to chose if called with prefix."
+  (interactive "P")
+  (call-interactively
+   (pcase arg
+     ('nil  'find-file)
+     ('(4)  'org-agenda-sets-open-agenda-file)
+     ('(16) 'org-agenda-sets-open-set-file))))
 
 (defun org-agenda-sets-use (s)
   "Select agenda set from `org-agenda-sets' (rebuild if needed) and assign it to `org-agenda-files'."
