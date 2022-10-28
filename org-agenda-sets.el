@@ -9,7 +9,6 @@
 (require 'f)
 (require 'dash)
 (require 'org-agenda)
-(require 'async)
 
 (defmacro org-agenda-sets-define (name &rest recipe)
   "Adds or updates agenda set's definition (NAME (RECIPE)) to `org-agenda-sets-definitions'"
@@ -173,12 +172,16 @@
     (if (featurep 'async)
         (async-start
          ;; What to do in the child process
-         (lambda () (org-agenda-sets-scan sets))
+         `(lambda ()
+            ,(async-inject-variables "^load-path$")
+            (require 'org-agenda-sets)
+            ,(async-inject-variables "^sets$")
+            (org-agenda-sets-scan sets))
          ;; What to do when it finishes
-         (lambda (nsets)
-           (message "Scanned finished for %s agenda files sets" nsets)))
+         ;; (lambda (nsets)
+           ;; (message "Scanned finished for %s agenda files sets" nsets))
+         )
       (org-agenda-sets-scan sets))
-    (org-agenda-sets-scan sets)
     ;; write results to file
     (org-agenda-sets-save))
   ;; return
