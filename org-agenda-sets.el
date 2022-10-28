@@ -160,8 +160,10 @@
   (unless quite
     (message "Wrote org-agenda-sets to %s" org-agenda-sets-file)))
 
-(defun org-agenda-sets (&optional reload rescan sets)
-  "Returns `org-agenda-sets' list if it is not nil. If it is nil or RELOAD is set then attempt to load from `org-agenda-sets-file'. If load fails or RESCAN is set then attempt to rescan files with `org-agenda-sets-scan' (optional SETS is passed there) and rewrite `org-agenda-sets-file' with new value of `org-agenda-sets'."
+(defun org-agenda-sets (&optional reload rescan sets no-async)
+  "Returns `org-agenda-sets' list if it is not nil. If it is nil or RELOAD is set then attempt to load from `org-agenda-sets-file'. If load fails or RESCAN is set then attempt to rescan files with `org-agenda-sets-scan' (optional SETS is passed there) and rewrite `org-agenda-sets-file' with new value of `org-agenda-sets'.
+
+Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is provided from `emacs-async' package."
   (when-let (((or rescan
                   (and (or reload (not org-agenda-sets))
                        (not (load org-agenda-sets-file 'no-error 'no-message))
@@ -174,13 +176,15 @@
                                ;; write results to file
                                (org-agenda-sets-save)
                                nsets)))
-    (if (featurep 'async)
+    (if (and (not no-async)
+             (featurep 'async))
         (async-start
          ;; What to do in the child process
          `(lambda ()
             ,(async-inject-variables "^load-path$")
             (require 'org-agenda-sets)
             ,(async-inject-variables "^sets$")
+            ,(async-inject-variables "^org-agenda-sets-definitions$")
             ,(async-inject-variables "^scan-and-save$")
             (eval scan-and-save))
          ;; What to do when it finishes
