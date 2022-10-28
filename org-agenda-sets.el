@@ -9,6 +9,7 @@
 (require 'f)
 (require 'dash)
 (require 'org-agenda)
+(require 'async)
 
 (defmacro org-agenda-sets-define (name &rest recipe)
   "Adds or updates agenda set's definition (NAME (RECIPE)) to `org-agenda-sets-definitions'"
@@ -133,7 +134,7 @@
   (let ((sets (if sets sets
                 ;; reverse because set definition adds set in front
                 (seq-reverse org-agenda-sets-definitions))))
-    (dolist (s sets)
+    (dolist (s sets (length sets))
       (unless quite
         (message "Scanning set: %s" (car s)))
       ;; modifies org-agenda-sets
@@ -169,6 +170,14 @@
     ;; reset
     (setq org-agenda-sets nil)
     ;; scan and fill org-agenda-sets
+    (if (featurep 'async)
+        (async-start
+         ;; What to do in the child process
+         (lambda () (org-agenda-sets-scan sets))
+         ;; What to do when it finishes
+         (lambda (nsets)
+           (message "Scanned finished for %s agenda files sets" nsets)))
+      (org-agenda-sets-scan sets))
     (org-agenda-sets-scan sets)
     ;; write results to file
     (org-agenda-sets-save))
