@@ -162,13 +162,18 @@
 
 (defun org-agenda-sets (&optional reload rescan sets)
   "Returns `org-agenda-sets' list if it is not nil. If it is nil or RELOAD is set then attempt to load from `org-agenda-sets-file'. If load fails or RESCAN is set then attempt to rescan files with `org-agenda-sets-scan' (optional SETS is passed there) and rewrite `org-agenda-sets-file' with new value of `org-agenda-sets'."
-  (when (or rescan
-            (and (or reload (not org-agenda-sets))
-                 (not (load org-agenda-sets-file 'no-error 'no-message))
-                 (y-or-n-p "Build org-agenda-sets-file?")))
-    ;; reset
-    (setq org-agenda-sets nil)
-    ;; scan and fill org-agenda-sets
+  (when-let (((or rescan
+                  (and (or reload (not org-agenda-sets))
+                       (not (load org-agenda-sets-file 'no-error 'no-message))
+                       (y-or-n-p "Build org-agenda-sets-file?"))))
+             ;; scan and fill org-agenda-sets
+             (scan-and-save '(progn
+                               ;; reset
+                               (setq org-agenda-sets nil)
+                               (setq nsets (org-agenda-sets-scan sets))
+                               ;; write results to file
+                               (org-agenda-sets-save)
+                               nsets)))
     (if (featurep 'async)
         (async-start
          ;; What to do in the child process
@@ -176,14 +181,12 @@
             ,(async-inject-variables "^load-path$")
             (require 'org-agenda-sets)
             ,(async-inject-variables "^sets$")
-            (org-agenda-sets-scan sets))
+            ,(async-inject-variables "^scan-and-save$")
+            (eval scan-and-save))
          ;; What to do when it finishes
-         ;; (lambda (nsets)
-           ;; (message "Scanned finished for %s agenda files sets" nsets))
-         )
-      (org-agenda-sets-scan sets))
-    ;; write results to file
-    (org-agenda-sets-save))
+         (lambda (nsets)
+           (message "Scanned finished for %s agenda files sets" nsets)))
+      (eval scan-and-save)))
   ;; return
   org-agenda-sets)
 
@@ -197,7 +200,7 @@
   "Rebuilds `org-agenda-sets' and saves it to `org-agenda-sets-file'."
   (interactive)
   (org-agenda-sets nil 'rescan)
-  (message "Agenda sets rebuild."))
+  (message "Agenda sets are rebuilding... (asynchronously)"))
 
 (defun org-agenda-sets-eq (symb name)
   (string= (symbol-name symb) name))
