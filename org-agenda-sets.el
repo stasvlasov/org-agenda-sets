@@ -10,6 +10,7 @@
 (require 'f)
 (require 'dash)
 (require 'org-agenda)
+(require 'async)
 
 (defmacro org-agenda-sets-define (name &rest recipe)
   "Adds or updates agenda set's definition (NAME (RECIPE)) to `org-agenda-sets-definitions'"
@@ -176,8 +177,9 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
   (message "Agenda sets reloaded from disk."))
 
 
-(defun org-agenda-sets-scan-save-and-use-def-async (&optional sets)
-  "Scans sets and saves to file"
+(defun org-agenda-sets-reset (&optional sets)
+  "Asyncroniously rescans all files for sets defined in `org-agenda-sets-definitions', saves it to `org-agenda-sets-file' and use either current or default set. If SETS are provided rescan thoses sets instead."
+  (interactive)
   (message "Agenda sets are rebuilding... (asynchronously)")
   (async-start
    ;; What to do in the child process
@@ -206,12 +208,7 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
                          (current-message) set (length org-agenda-files)))
        (message "Current or default agenda set is not defined!")))))
 
-(defun org-agenda-sets-reset (&optional not-async)
-  "Rebuilds `org-agenda-sets' and saves it to `org-agenda-sets-file'."
-  (interactive "P")
-  (if not-async
-      (org-agenda-sets nil 'rescan)
-    (org-agenda-sets-scan-save-and-use-def-async)))
+
 
 (defun org-agenda-sets-eq (symb name)
   (string= (symbol-name symb) name))
