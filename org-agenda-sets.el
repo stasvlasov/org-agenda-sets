@@ -4,7 +4,8 @@
   "Where to store agenda sets (lists of agenda files).")
 (defvar org-agenda-sets nil "List of (SET-NAME AGENDA-FILES).")
 (defvar org-agenda-sets-definitions nil "List of (SET-NAME SET-RECIPE).")
-(defvar org-agenda-sets-default-set nil "Default set in `org-agenda-sets-use' prompt.")
+(defvar org-agenda-sets-default-set nil "Default set in `org-agenda-sets-use' prompt and default set to use.")
+(defvar org-agenda-sets-current-set nil "The name of the current set (i.e., set last used)")
 
 (require 'f)
 (require 'dash)
@@ -135,20 +136,10 @@
                 (seq-reverse org-agenda-sets-definitions))))
     (dolist (s sets (length sets))
       (unless quite
-        (message "Scanning set: %s" (car s)))
+        (message "Scanning agenda set: %s..." (car s)))
       ;; modifies org-agenda-sets
       (setf (alist-get (car s) org-agenda-sets nil 'remove)
             (org-agenda-sets-make (cadr s))))))
-
-;; (org-agenda-sets-scan)
-
-;; adds
-;; (org-agenda-sets-scan '((lala (:dir "~/org/music"
-                           ;; :files-filter (:ext "org")))))
-
-;; removes
-;; (setf (alist-get 'lala org-agenda-sets nil 'remove) nil)
-
 
 (defun org-agenda-sets-save (&optional quite)
   "Saves `org-agenda-sets' to `org-agenda-sets-file' file."
@@ -164,35 +155,19 @@
   "Returns `org-agenda-sets' list if it is not nil. If it is nil or RELOAD is set then attempt to load from `org-agenda-sets-file'. If load fails or RESCAN is set then attempt to rescan files with `org-agenda-sets-scan' (optional SETS is passed there) and rewrite `org-agenda-sets-file' with new value of `org-agenda-sets'.
 
 Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is provided from `emacs-async' package."
-  (when-let (((or rescan
-                  (and (or reload (not org-agenda-sets))
-                       (not (load org-agenda-sets-file 'no-error 'no-message))
-                       (y-or-n-p "Build org-agenda-sets-file?"))))
-             ;; scan and fill org-agenda-sets
-             (scan-and-save '(progn
-                               ;; reset
-                               (setq org-agenda-sets nil)
-                               (setq nsets (org-agenda-sets-scan sets))
-                               ;; write results to file
-                               (org-agenda-sets-save)
-                               nsets)))
-    (if (and (not no-async)
-             (featurep 'async))
-        (async-start
-         ;; What to do in the child process
-         `(lambda ()
-            ,(async-inject-variables "^load-path$")
-            (require 'org-agenda-sets)
-            ,(async-inject-variables "^sets$")
-            ,(async-inject-variables "^org-agenda-sets-definitions$")
-            ,(async-inject-variables "^scan-and-save$")
-            (eval scan-and-save))
-         ;; What to do when it finishes
-         (lambda (nsets)
-           (message "Scanned finished for %s agenda files sets" nsets)))
-      (eval scan-and-save)))
+  (when (or rescan
+             (and (or reload (not org-agenda-sets))
+                  (not (load org-agenda-sets-file 'no-error 'no-message))
+                  (y-or-n-p
+                   "No org-agenda-sets-file is found. Build one? (it is done syncroniously so can take long)")))
+    ;; scan and save org-agenda-sets
+    (setq org-agenda-sets nil)
+    (org-agenda-sets-scan sets)
+    ;; write results to file
+    (org-agenda-sets-save))
   ;; return
   org-agenda-sets)
+
 
 (defun org-agenda-sets-reload ()
   "Sets `org-agenda-sets' from `org-agenda-sets-file'. Rebuild if no file was found."
@@ -200,15 +175,49 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
   (org-agenda-sets 'reload)
   (message "Agenda sets reloaded from disk."))
 
-(defun org-agenda-sets-rebuild ()
+
+(defun org-agenda-sets-scan-save-and-use-def-async (&optional sets)
+  "Scans sets and saves to file"
+  (message "Agenda sets are rebuilding... (asynchronously)")
+  (async-start
+   ;; What to do in the child process
+   `(lambda ()
+      ,(async-inject-variables "^load-path$")
+      (require 'org-agenda-sets)
+      ,(async-inject-variables "^sets$")
+      ,(async-inject-variables "^org-agenda-sets-definitions$")
+      ,(async-inject-variables "^scan-and-save$")
+      ;; reset and rescan
+      (setq org-agenda-sets nil)
+      (org-agenda-sets-scan sets)
+      ;; write results to file
+      (org-agenda-sets-save)
+      org-agenda-sets)
+   ;; What to do when it finishes
+   (lambda (sets)
+     (setq org-agenda-sets sets)
+     (message "Scanned finished for %s agenda sets (%s unique files)."
+              (length sets)
+              (length (seq-uniq (seq-mapcat 'cdr sets))))
+     (if-let ((set (or org-agenda-sets-current-set
+                       org-agenda-sets-default-set)))
+         (progn (org-agenda-sets-use set 'quite)
+                (message "%s Default set '%s' is loaded (%s agenda files)."
+                         (current-message) set (length org-agenda-files)))
+       (message "Current or default agenda set is not defined!")))))
+
+(defun org-agenda-sets-reset (&optional not-async)
   "Rebuilds `org-agenda-sets' and saves it to `org-agenda-sets-file'."
-  (interactive)
-  (org-agenda-sets nil 'rescan)
-  (message "Agenda sets are rebuilding... (asynchronously)"))
+  (interactive "P")
+  (if not-async
+      (org-agenda-sets nil 'rescan)
+    (org-agenda-sets-scan-save-and-use-def-async)))
 
 (defun org-agenda-sets-eq (symb name)
   (string= (symbol-name symb) name))
 
+
+;; find org files
 
 (defun org-agenda-sets-open-set-file (s)
   "Chose agenda set from `org-agenda-sets' and find-file in it."
@@ -240,7 +249,10 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
      ('(4)  'org-agenda-sets-open-agenda-file)
      ('(16) 'org-agenda-sets-open-set-file))))
 
-(defun org-agenda-sets-use (s)
+
+;; make org-agenda-files from sets
+
+(defun org-agenda-sets-use (s &optional quite)
   "Select agenda set from `org-agenda-sets' (rebuild if needed) and assign it to `org-agenda-files'."
   (interactive
    (list (completing-read
@@ -248,7 +260,9 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
           (mapcar 'car (org-agenda-sets)) nil nil nil nil org-agenda-sets-default-set)))
   (setq org-agenda-files
         (alist-get s org-agenda-sets nil nil 'org-agenda-sets-eq))
-  (message "%s files are used for Org Agenda" (length org-agenda-files)))
+  (setq org-agenda-sets-current-set s)
+  (unless quite
+    (message "Using '%s' set of %s files for Org Agenda" s (length org-agenda-files))))
 
 (defun org-agenda-sets-add (s)
   "Select agenda set from `org-agenda-sets' (rebuild if needed) and add it to `org-agenda-files'."
