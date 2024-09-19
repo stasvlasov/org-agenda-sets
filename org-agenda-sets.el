@@ -62,25 +62,28 @@
 
 (defun org-agenda-sets-get (names)
   "Return set of agenda-files by name from `org-agenda-sets'. List of files is expected to be third element in each named (first element is a name) list in `org-agenda-sets'."
-  (-flatten (--map (alist-get it org-agenda-sets) (-flatten names))))
+  ;; (-flatten (--map (alist-get it org-agenda-sets) (-flatten names)))
+  (seq-mapcat
+   (lambda (set) (alist-get set org-agenda-sets nil nil 'org-agenda-sets-eq))
+   (if (listp names) names (list names))))
 
 ;; (org-agenda-sets-get '(name2 name3))
+;; (org-agenda-sets-get '("name2" "name3"))
 ;; (org-agenda-sets-get '(name2 name1))
 ;; (org-agenda-sets-get 'name1)
+;; (org-agenda-sets-get "name1")
 ;; (org-agenda-sets-get nil)
 
 ;; (setq org-agenda-sets
-      ;; '((name1
-         ;; (1 2 3 4))
-        ;; (name2
-         ;; (4 5 6 7))))
+;;       '((name1 1 2 3 4)
+;;         (name2 4 5 6 7)))
 
 (defun org-agenda-sets-match-p (regex str &optional regex-nil)
   "Matches file or dir (STR) with REGEX. Returns REGEX-NIL if REGEX or STR is nil."
-    (if-let ((regex-p (stringp regex))
-             (str (f-filename str)))
-          (string-match-p regex str)
-      regex-nil))
+  (if-let ((regex-p (stringp regex))
+           (str (f-filename str)))
+      (string-match-p regex str)
+    regex-nil))
 
 (defun org-agenda-sets-make (recipe &optional quite)
   "Define `agenda-files' set. Checks if the variable."
@@ -211,7 +214,9 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
 
 
 (defun org-agenda-sets-eq (symb name)
-  (string= (symbol-name symb) name))
+  (if (stringp name)
+      (string= (symbol-name symb) name)
+    (equal symb name)))
 
 
 ;; find org files
