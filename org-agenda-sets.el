@@ -18,13 +18,13 @@
 
 (defun org-agenda-sets--:arg (name args &optional to-list)
   "Gets value from ARGS list that follows NAME element. TO-LIST option ensures that the value wrapped as a list."
-      (let ((i (-elem-index name args)))
-        (when-let ((i i)
-                   (arg (nth (1+ i) args)))
-          (if (and to-list
-                   (not (listp arg)))
-              (list arg)
-            arg))))
+  (let ((i (-elem-index name args)))
+    (when-let* ((i i)
+                (arg (nth (1+ i) args)))
+      (if (and to-list
+               (not (listp arg)))
+          (list arg)
+        arg))))
 
 (defun org-agenda-sets-make-regexp (args)
   "Makes regexp form a ARGS list (:exact VALS :regex VALS :fixed VALS :ends VALS :begins VALS) in any order. VALS are either string or list of strings. If only (VALS) are provided as ARG then it treats it as (:exact VALS)"
@@ -80,8 +80,8 @@
 
 (defun org-agenda-sets-match-p (regex str &optional regex-nil)
   "Matches file or dir (STR) with REGEX. Returns REGEX-NIL if REGEX or STR is nil."
-  (if-let ((regex-p (stringp regex))
-           (str (f-filename str)))
+  (if-let* ((regex-p (stringp regex))
+            (str (f-filename str)))
       (string-match-p regex str)
     regex-nil))
 
@@ -149,9 +149,9 @@
   "Saves `org-agenda-sets' to `org-agenda-sets-file' file."
   (interactive)
   (with-temp-file org-agenda-sets-file
-      (insert "(setq org-agenda-sets")
-      (newline)
-      (insert "'" (pp org-agenda-sets) ")"))
+    (insert "(setq org-agenda-sets")
+    (newline)
+    (insert "'" (pp-to-string org-agenda-sets) ")"))
   (unless quite
     (message "Wrote org-agenda-sets to %s" org-agenda-sets-file)))
 
@@ -202,13 +202,13 @@ Unless NO-ASYNC is set try to rescan sets asyncroniously if `async' feature is p
    (lambda (sets)
      (setq org-agenda-sets sets)
      (message "Scanned finished for %s agenda sets (%s unique files)."
-              (length sets)
-              (length (seq-uniq (seq-mapcat 'cdr sets))))
-     (if-let ((set (or org-agenda-sets-current-set
-                       org-agenda-sets-default-set)))
+              (length org-agenda-sets)
+              (length (seq-uniq (seq-mapcat 'cdr org-agenda-sets))))
+     (if-let* ((set (or org-agenda-sets-current-set
+                        org-agenda-sets-default-set)))
          (progn (org-agenda-sets-use set 'quite)
                 (message "%s Default set '%s' is loaded (%s agenda files)."
-                         (current-message) set (length org-agenda-files)))
+                         (or (current-message) "") set (length org-agenda-files)))
        (message "Current or default agenda set is not defined!")))))
 
 
